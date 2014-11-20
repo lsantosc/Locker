@@ -1,0 +1,19 @@
+{
+    "name": "andrecavallari/locker",
+    "description": "Plugin de ACL simples usando PHP para Cake 3.0",
+    "type":"cakephp-plugin",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Andre",
+            "email": "cavallari@live.com"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {},
+    "autoload":{
+        "psr-4":{
+            "Locker\\":"src"
+        }
+    }
+}
