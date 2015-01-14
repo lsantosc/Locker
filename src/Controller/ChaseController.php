@@ -14,6 +14,7 @@ class ChaseController extends AppController
 
     public function index()
     {
+        pr($this->Auth->role);
     }
 
     public function add()

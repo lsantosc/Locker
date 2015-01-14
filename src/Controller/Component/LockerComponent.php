@@ -5,6 +5,7 @@ use Cake\Controller\Component\AuthComponent;
 use Cake\Controller\ComponentRegistry;
 use Cake\Core\Configure;
 use Cake\Core\Exception\Exception;
+use Cake\Network\Exception\MethodNotAllowedException;
 use Cake\Network\Exception\NotFoundException;
 use Cake\Routing\Router;
 
@@ -13,6 +14,7 @@ class LockerComponent extends AuthComponent
 
     public $role = 'public';
     public $roles;
+    public $controllers;
 
     public function __construct(ComponentRegistry $registry, array $config = [])
     {
@@ -23,25 +25,45 @@ class LockerComponent extends AuthComponent
         //Load configuration directives for Locker
         $params = $this->request->params;
         Configure::load('locker');
-        $this->roles = Configure::read('Locker.roles');
-        $controllers = Configure::read('Locker.controllers');
+        $this->roles = Configure::read('locker.roles');
+        $this->controllers = Configure::read('locker.controllers');
 
-        $plugin = empty($params['plugin']) ? '' : ".{$params['plugin']}";
+        $path = "/{$params['controller']}/{$params['action']}";
+        if(!empty($params['plugin'])) $path = "/{$params['plugin']}".$path;
 
-        $config = [
-            'base'=>strtolower("Locker.controllers{$plugin}.{$params['controller']}.{$params['action']}"),
-            'full'=>strtolower("Locker.controllers{$plugin}.{$params['controller']}.{$params['action']}.".implode($params['pass'])),
-            'wildcard'=>strtolower("Locker.controllers{$plugin}.{$params['controller']}.{$params['action']}.*"),
-        ];
+        $base = strtolower($path);
+        $exact = strtolower($path . '/' . implode('/', $params['pass']));
+        $wildcard = strtolower($base . '/*');
 
-        pr($config);
-        pr(Configure::read('Locker.controllers.locker.chase.another.*'));
+        if($this->role != 'public' && !in_array($this->role,$this->roles)) {
+            throw new Exception(__('Your user role is not present in locker configuration'));
+        }
 
-        //pr($config);
+        if(!empty($this->controllers[$exact])){
+            if($this->check($exact)) return $this->allow();
+            if($this->user()) throw new MethodNotAllowedException(sprintf(__("You do not have permission to access this area: %s"),$exact));
+            return;
+        }
 
-        //pr($controllers);
+        if(!empty($this->controllers[$wildcard]) && !empty($params['pass'])){
+            if($this->check($wildcard)) return $this->allow();
+            if($this->user()) throw new MethodNotAllowedException(sprintf(__("You do not have permission to access this area: %s"),$wildcard));
+            return;
+        }
 
-        exit;
+        if(!empty($this->controllers[$base])){
+            if($this->check($base)) return $this->allow();
+            if($this->user()) throw new MethodNotAllowedException(sprintf(__("You do not have permission to access this area: %s"),$base));
+            return;
+        }
+
+        throw new Exception(__('Method is not present on locker.php configuration'));
     }
 
+    protected function check($path){
+        return (
+            in_array($this->role,$this->controllers[$path])
+            || in_array('public',$this->controllers[$path])
+        );
+    }
 }
