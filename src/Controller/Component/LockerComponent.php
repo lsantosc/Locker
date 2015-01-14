@@ -30,7 +30,7 @@ class LockerComponent  extends AuthComponent{
         }
 
         if($this->user()){
-            $group = $this->user('group');
+            $group = $this->user('role');
             if(!empty($sectors[$url]) && in_array($group,$sectors[$url])) return;
             if(!empty($sectors[$wdc]) && in_array($group,$sectors[$wdc])) return;
         }
