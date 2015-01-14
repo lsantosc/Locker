@@ -1,58 +1,47 @@
 <?php
 namespace Locker\Controller\Component;
+
 use Cake\Controller\Component\AuthComponent;
 use Cake\Controller\ComponentRegistry;
 use Cake\Core\Configure;
+use Cake\Core\Exception\Exception;
 use Cake\Network\Exception\NotFoundException;
 use Cake\Routing\Router;
 
-class LockerComponent  extends AuthComponent{
+class LockerComponent extends AuthComponent
+{
 
-    public $group = 'admin';
-    public $loginAction = ['plugin'=>false,'prefix'=>false,'controller'=>'users','action'=>'login'];
+    public $role = 'public';
+    public $roles;
 
-    public function __construct(ComponentRegistry $registry, array $config = []){
+    public function __construct(ComponentRegistry $registry, array $config = [])
+    {
         parent::__construct($registry, $config);
-        $this->config('loginAction',$this->loginAction);
-        $this->allow();
-        if(!file_exists(CONFIG."locker.php")) return;
+        if($this->user('role')) $this->role = $this->user('role');
+        if (!file_exists(CONFIG . "locker.php")) throw new Exception(_('locker.php not found in config directory'));
+
+        //Load configuration directives for Locker
+        $params = $this->request->params;
         Configure::load('locker');
-        $groups = Configure::read('Locker.groups');
-        $sectors = Configure::read('Locker.sectors');
+        $this->roles = Configure::read('Locker.roles');
+        $controllers = Configure::read('Locker.controllers');
 
-        $url = $this->_getURL();
-        $wdc = $this->_getWildcarded();
+        $plugin = empty($params['plugin']) ? '' : ".{$params['plugin']}";
 
-        if(empty($sectors[$wdc]) && empty($sectors[$url])) return;
-        if(!$this->user()){
-            $this->deny();
-            return;
-        }
+        $config = [
+            'base'=>strtolower("Locker.controllers{$plugin}.{$params['controller']}.{$params['action']}"),
+            'full'=>strtolower("Locker.controllers{$plugin}.{$params['controller']}.{$params['action']}.".implode($params['pass'])),
+            'wildcard'=>strtolower("Locker.controllers{$plugin}.{$params['controller']}.{$params['action']}.*"),
+        ];
 
-        if($this->user()){
-            $group = $this->user('role');
-            if(!empty($sectors[$url]) && in_array($group,$sectors[$url])) return;
-            if(!empty($sectors[$wdc]) && in_array($group,$sectors[$wdc])) return;
-        }
-        throw new NotFoundException(__('Você não tem permissão para acessar esta área'));
+        pr($config);
+        pr(Configure::read('Locker.controllers.locker.chase.another.*'));
+
+        //pr($config);
+
+        //pr($controllers);
+
         exit;
-    }
-
-    private function _getURL(){
-        $params = $this->request->params;
-        unset($params['pass']);
-        $url = Router::url($params + $this->request->param('pass'));
-        $url = str_replace($this->request->base,'',$url);
-        if(empty($url)) $url = '/';
-        return $url;
-    }
-
-    private function _getWildcarded(){
-        $params = $this->request->params;
-        unset($params['pass']);
-        $route = urldecode(Router::url($params + ['*']));
-        $route = strtr($route,[$this->request->base=>'']);
-        return $route;
     }
 
 }
