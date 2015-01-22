@@ -29,6 +29,7 @@ class LockerComponent extends AuthComponent
         $this->controllers = Configure::read('locker.controllers');
 
         $path = "/{$params['controller']}/{$params['action']}";
+        if(!empty($params['prefix'])) $path = "/{$params['prefix']}".$path;
         if(!empty($params['plugin'])) $path = "/{$params['plugin']}".$path;
 
         $base = strtolower($path);
