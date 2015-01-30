@@ -32,27 +32,27 @@ class LockerComponent extends AuthComponent
         if(!empty($params['prefix'])) $path = "/{$params['prefix']}".$path;
         if(!empty($params['plugin'])) $path = "/{$params['plugin']}".$path;
 
-        $base = strtolower($path);
+        $base = '/' . $this->request->url;
+        $wildcard = '/' . $this->getWildcard($params);
         $exact = strtolower($path . '/' . implode('/', $params['pass']));
-        $wildcard = strtolower($base . '/*');
 
         if($this->role != 'public' && !in_array($this->role,$this->roles)) {
             throw new Exception(__('Your user role is not present in locker configuration'));
         }
 
-        if(!empty($this->controllers[$exact])){
+        if(!empty($this->controllers[$exact])) {
             if($this->check($exact)) return $this->allow();
             if($this->user()) throw new MethodNotAllowedException(sprintf(__("You do not have permission to access this area: %s"),$exact));
             return;
         }
 
-        if(!empty($this->controllers[$wildcard]) && !empty($params['pass'])){
+        if(!empty($this->controllers[$wildcard])) {
             if($this->check($wildcard)) return $this->allow();
             if($this->user()) throw new MethodNotAllowedException(sprintf(__("You do not have permission to access this area: %s"),$wildcard));
             return;
         }
 
-        if(!empty($this->controllers[$base])){
+        if(!empty($this->controllers[$base])) {
             if($this->check($base)) return $this->allow();
             if($this->user()) throw new MethodNotAllowedException(sprintf(__("You do not have permission to access this area: %s"),$base));
             return;
@@ -61,7 +61,27 @@ class LockerComponent extends AuthComponent
         throw new Exception(__('Method is not present on locker.php configuration'));
     }
 
-    protected function check($path){
+    protected function getWildcard($params)
+    {
+        $base = $this->request->url;
+
+        if(!empty($params['pass'])){
+            $pass = implode('/', $params['pass']);
+            $base = str_replace($pass,'',$base);
+        }
+
+        if(in_array($params['action'],explode('/',$base))) return str_replace($params['action'],'',$base) . '*';
+
+        $base = array_reverse(explode('/',$base));
+        if(empty($base[0])) array_shift($base);
+        $base = implode('/',array_reverse($base));
+
+        return str_replace($params['action'].'/','',$base) . '/*';
+
+    }
+
+    protected function check($path)
+    {
         return (
             in_array($this->role,$this->controllers[$path])
             || in_array('public',$this->controllers[$path])
