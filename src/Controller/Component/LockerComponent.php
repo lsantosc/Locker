@@ -70,14 +70,19 @@ class LockerComponent extends AuthComponent
             $base = str_replace($pass,'',$base);
         }
 
-        if(in_array($params['action'],explode('/',$base))) return str_replace($params['action'],'',$base) . '*';
+        if(in_array($params['action'],explode('/',$base))){
+            if($base[strlen($base)-1]) $base = $this->removeLastSlash($base);
+            return str_replace($params['action'],'',$base).'*';
+        }
 
-        $base = array_reverse(explode('/',$base));
-        if(empty($base[0])) array_shift($base);
-        $base = implode('/',array_reverse($base));
+        return $this->removeLastSlash(str_replace($params['action'].'/','',$base)) . '/*';
 
-        return str_replace($params['action'].'/','',$base) . '/*';
+    }
 
+    private function removeLastSlash($url) {
+        $url = array_reverse(explode('/',$url));
+        if(empty($url[0])) array_shift($url);
+        return implode('/',array_reverse($url));
     }
 
     protected function check($path)
